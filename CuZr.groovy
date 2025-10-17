@@ -2,6 +2,7 @@ import groovy.transform.Field
 import jse.atom.Structures
 import jse.code.Conf
 import jse.code.OS.Slurm
+import jse.code.IO
 import jse.code.UT
 import jse.code.io.RefreshableFilePrintStream
 import jse.code.random.LocalRandom
@@ -19,9 +20,8 @@ import static jse.code.CS.MASS
 import static jse.code.CS.VERSION
 import static jse.code.UT.Code.*
 import static jse.code.UT.Math.rng
-import static jse.code.UT.Text.percent
-import static jsex.rareevent.ForwardFluxSampling.CONSERVATIVE_GUESS
-import static jsex.rareevent.ForwardFluxSampling.TIME_DEPENDENT
+import static jse.code.IO.Text.percent
+import static jsex.rareevent.ForwardFluxSampling.*
 
 final def workingDirIn = args ? args[0] : 'CuZr-FFS'
 
@@ -134,7 +134,7 @@ if (genInitPoints) try (def lmp = new NativeLmp('-log', 'none', '-screen', 'none
     if (me == 0) UT.Timer.tic()
     def inDataInit = Lmpdat.fromAtomData(Structures.FCC(cellSize, replicate).opt().mapTypeRandom(new LocalRandom(seed()), Cu, Zr), [MASS.Cu, MASS.Zr])
     MPI.Comm.WORLD.barrier()
-    runMelt(lmp, inDataInit, initOutDataPath, meltTemp, initRunStep, initTimestep)
+    runMelt(MPI.Comm.WORLD, lmp, inDataInit, initOutDataPath, meltTemp, initRunStep, initTimestep)
     MPI.Comm.WORLD.barrier()
     if (me == 0) UT.Timer.toc('Init melt data')
     
@@ -149,9 +149,9 @@ if (genInitPoints) try (def lmp = new NativeLmp('-log', 'none', '-screen', 'none
     println("INIT_CORE_NUM: ${np}")
     }
     if (me == 0) UT.Timer.tic()
-    if (me == 0) UT.IO.copy(initOutDataPath, FFSInDataPath)
+    if (me == 0) IO.copy(initOutDataPath, FFSInDataPath)
     MPI.Comm.WORLD.barrier()
-    runMelt(lmp, FFSInDataPath, FFSOutDataPath, FFSTemp, FFSRunStep, initTimestep)
+    runMelt(MPI.Comm.WORLD, lmp, FFSInDataPath, FFSOutDataPath, FFSTemp, FFSRunStep, initTimestep)
     MPI.Comm.WORLD.barrier()
     if (me == 0) UT.Timer.toc('Gen FFS data')
 }
@@ -169,9 +169,9 @@ if (genInitPoints || genPostInitPoints) try (def lmp = new NativeLmp(['-log', 'n
     println("LMP_CORE_NUM: ${lmpCores}")
     }
     if (me == 0) UT.Timer.tic()
-    if (subComm.rank() == 0) UT.IO.copy(FFSOutDataPath, "${FFSInDataPath}-${color}")
+    if (subComm.rank() == 0) IO.copy(FFSOutDataPath, "${FFSInDataPath}-${color}")
     MPI.Comm.WORLD.barrier()
-    runMelt(lmp, "${FFSInDataPath}-${color}", "${FFSOutDataPath}-${color}", FFSTemp, FFSContinueStep, initTimestep)
+    runMelt(subComm, lmp, "${FFSInDataPath}-${color}", "${FFSOutDataPath}-${color}", FFSTemp, FFSContinueStep, initTimestep)
     MPI.Comm.WORLD.barrier()
     if (me == 0) UT.Timer.toc('Continue FFS data')
 }
@@ -224,12 +224,12 @@ MultipleNativeLmpFullPathGenerator.withOf(subComm, subRoots, dumpCal, initPoints
         Dump.fromAtomDataList(FFS.pickPath()).write(FFSDumpPath)
         if (dumpAllPath) {
             for (j in range(FFS.pointsOnLambda().size())) Dump.fromAtomDataList(FFS.pickPath(j)).write(FFSAllDumpPath + '/' + j)
-            UT.IO.dir2zip(FFSAllDumpPath, "${FFSAllDumpPath}-0.zip")
-            UT.IO.rmdir(FFSAllDumpPath)
+            IO.dir2zip(FFSAllDumpPath, "${FFSAllDumpPath}-0.zip")
+            IO.rmdir(FFSAllDumpPath)
         }
         if (FFS.stepFinished()) {
             Dump.fromAtomDataList(FFS.pointsOnLambda()).write(FFSRestartPathDu)
-            UT.IO.map2json(FFS.restData(), FFSRestartPathRe)
+            IO.map2json(FFS.restData(), FFSRestartPathRe)
         }
         
         def i = 0
@@ -245,12 +245,12 @@ MultipleNativeLmpFullPathGenerator.withOf(subComm, subRoots, dumpCal, initPoints
             Dump.fromAtomDataList(FFS.pickPath()).write(FFSDumpPath)
             if (dumpAllPath) {
                 for (j in range(FFS.pointsOnLambda().size())) Dump.fromAtomDataList(FFS.pickPath(j)).write(FFSAllDumpPath + '/' + j)
-                UT.IO.dir2zip(FFSAllDumpPath, "${FFSAllDumpPath}-${i + 1}.zip")
-                UT.IO.rmdir(FFSAllDumpPath)
+                IO.dir2zip(FFSAllDumpPath, "${FFSAllDumpPath}-${i + 1}.zip")
+                IO.rmdir(FFSAllDumpPath)
             }
             if (FFS.stepFinished()) {
                 Dump.fromAtomDataList(FFS.pointsOnLambda()).write(FFSRestartPathDu)
-                UT.IO.map2json(FFS.restData(), FFSRestartPathRe)
+                IO.map2json(FFS.restData(), FFSRestartPathRe)
             }
             ++i
         }
@@ -265,8 +265,8 @@ subComm.shutdown()
 MPI.shutdown()
 
 
-static void runMelt(NativeLmp lmp, Lmpdat inData, String outDataPath, double temperature, int runStep, double timestep) {
-    if (lmp.comm().rank() == 0) UT.IO.validPath(outDataPath)
+static void runMelt(MPI.Comm comm, NativeLmp lmp, Lmpdat inData, String outDataPath, double temperature, int runStep, double timestep) {
+    if (comm.rank() == 0) IO.validPath(outDataPath)
     if (pbar && me==0) UT.Timer.pbar('runMelt', MathEX.Code.divup(runStep, 5000))
     lmp.command('units           metal')
     lmp.command('boundary        p p p')
@@ -274,7 +274,7 @@ static void runMelt(NativeLmp lmp, Lmpdat inData, String outDataPath, double tem
     lmp.loadData(inData)
     lmp.command("pair_style      $pairStyle")
     lmp.command("pair_coeff      $pairCoeff")
-    lmp.command("velocity        all create $temperature ${seedLmp(lmp.comm())} dist gaussian mom yes rot yes")
+    lmp.command("velocity        all create $temperature ${seedLmp(comm)} dist gaussian mom yes rot yes")
     lmp.command("fix             1 all npt temp $temperature $temperature 0.2 iso 0.0 0.0 2.0")
     if (pbar) {
         for (_ in range(runStep.intdiv(5000))) {
@@ -293,8 +293,8 @@ static void runMelt(NativeLmp lmp, Lmpdat inData, String outDataPath, double tem
     lmp.command("write_data      $outDataPath")
     lmp.clear()
 }
-static void runMelt(NativeLmp lmp, String inDataPath, String outDataPath, double temperature, int runStep, double timestep) {
-    if (lmp.comm().rank() == 0) UT.IO.validPath(outDataPath)
+static void runMelt(MPI.Comm comm, NativeLmp lmp, String inDataPath, String outDataPath, double temperature, int runStep, double timestep) {
+    if (comm.rank() == 0) IO.validPath(outDataPath)
     if (pbar && me==0) UT.Timer.pbar('runMelt', MathEX.Code.divup(runStep, 5000))
     lmp.command('units           metal')
     lmp.command('boundary        p p p')
@@ -302,7 +302,7 @@ static void runMelt(NativeLmp lmp, String inDataPath, String outDataPath, double
     lmp.command("read_data       $inDataPath")
     lmp.command("pair_style      $pairStyle")
     lmp.command("pair_coeff      $pairCoeff")
-    lmp.command("velocity        all create $temperature ${seedLmp(lmp.comm())} dist gaussian mom yes rot yes")
+    lmp.command("velocity        all create $temperature ${seedLmp(comm)} dist gaussian mom yes rot yes")
     lmp.command("fix             1 all npt temp $temperature $temperature 0.2 iso 0.0 0.0 2.0")
     if (pbar) {
         for (_ in range(runStep.intdiv(5000))) {
