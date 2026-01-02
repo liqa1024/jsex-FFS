@@ -15,12 +15,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import jse.code.IO
+import jse.code.OS
 import jse.lmp.NativeLmp
 import jse.parallel.MPI
 
-NativeLmp.Conf.CMAKE_SETTING['PKG_MANYBODY'] = 'YES'
-NativeLmp.Conf.CMAKE_SETTING['PKG_PLUGIN'] = 'YES'
-NativeLmp.Conf.REBUILD = true
+def lmpPkgEnv = OS.env('JSE_LMP_PKG')
+if (lmpPkgEnv==null || !IO.Text.splitStr(lmpPkgEnv).contains('MANYBODY')) {
+    throw new IllegalStateException('''
+Illegal environment variable setting, you need to set:
+---------------------------------
+export JSE_LMP_PKG=MANYBODY
+---------------------------------
+to ensure that LAMMPS can run EAM potential
+''')
+}
 
 MPI.InitHelper.init()
 NativeLmp.InitHelper.init()

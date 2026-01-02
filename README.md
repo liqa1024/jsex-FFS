@@ -13,10 +13,15 @@
   For Windows, [Microsoft MPI](https://www.microsoft.com/download/details.aspx?id=105289) is recommended
   (both `msmpisdk.msi` and `msmpisetup.exe` are required)
 
-  For Linux like Ubuntu, you can use `apt install mpich`
+  For Linux like Ubuntu, you can use `sudo apt install libopenmpi-dev`
 
-- [CMake](https://cmake.org/) (`>= 3.15`)
-
+- Environment variable:
+  
+  ```shell
+  export JSE_LMP_PKG=MANYBODY
+  ```
+  
+  to ensure auto compiled LAMMPS can run EAM potential
 
 # Usage
 
@@ -67,10 +72,15 @@ mpiexec -np 64 jse.bat NiAl.groovy NiAl-FFS
 
 # Citation
 
-TODO
+Qing-an Li, Yuxuan Chen, Bin Xu, Shiwu Gao, Pengfei Guan,
+[Revealing Crystal Nucleation Behaviors in Metallic Glass-Forming Liquids
+via Parallel Forward Flux Sampling with Multi-Type Bond-Orientational Order
+Parameter](https://www.sciencedirect.com/science/article/abs/pii/S1359645425011589),
+*Acta Materialia* **(2025)**
 
 
 # License
 
-Scripts on this repository are licensed under the [GNU GPLv3](LICENSE).
+Scripts on this repository are licensed under the **GNU GPL v3**.
+See [LICENSE](LICENSE) for details.
 

@@ -17,6 +17,7 @@
  */
 import groovy.transform.Field
 import jse.atom.Structures
+import jse.clib.LmpCore
 import jse.code.Conf
 import jse.code.OS.Slurm
 import jse.code.IO
@@ -70,7 +71,7 @@ if (me == 0) println("MPI_VERSION: ${MPI.libraryVersion()}")
 for (_ in range(me)) rng().nextInt()
 rng(rng().nextLong())
 
-if (me == 0) println("LMP_HOME: ${NativeLmp.Conf.LMP_HOME}")
+if (me == 0) println("LMP_EXE: ${LmpCore.EXE_PATH}")
 
 @Field final static boolean pbar = true
 if (pbar) {
