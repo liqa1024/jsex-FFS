@@ -1,6 +1,6 @@
 # Requirement
 
-- [jse](https://github.com/CHanzyLazer/jse/) (latest)
+- [jse](https://github.com/liqa1024/jse/) (latest)
 
 - C & C++ Compiler
 
