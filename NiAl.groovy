@@ -1,6 +1,6 @@
 /**
  * This file is part of example scripts of FFS in jse
- * Copyright 2025 Qing'an Li
+ * Copyright 2026 Qing'an Li
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,7 +150,7 @@ if (genInitPoints) try (def lmp = new NativeLmp('-log', 'none', '-screen', 'none
     println("INIT_CORE_NUM: ${np}")
     }
     if (me == 0) UT.Timer.tic()
-    def inDataInit = Lmpdat.fromAtomData(Structures.FCC(cellSize, replicate).opt().mapTypeRandom(new LocalRandom(seed()), Ni, Al), [MASS.Ni, MASS.Al])
+    def inDataInit = Lmpdat.of(Structures.FCC(cellSize, replicate).op().mapTypeRandom(new LocalRandom(seed()), Ni, Al), [MASS.Ni, MASS.Al])
     MPI.Comm.WORLD.barrier()
     runMelt(MPI.Comm.WORLD, lmp, inDataInit, initOutDataPath, meltTemp, initRunStep, initTimestep)
     MPI.Comm.WORLD.barrier()
@@ -240,14 +240,14 @@ MultipleNativeLmpFullPathGenerator.withOf(subComm, subRoots, dumpCal, initPoints
             def info = fullPathGen.getTimerInfo()
             println("PathGenEff: lmp = ${percent(info.lmp/info.total)}, lambda = ${percent(info.lambda/info.total)}, wait = ${percent(info.wait/info.total)}, else = ${percent((info.other)/info.total)}")
         }
-        Dump.fromAtomDataList(FFS.pickPath()).write(FFSDumpPath)
+        Dump.of(FFS.pickPath()).write(FFSDumpPath)
         if (dumpAllPath) {
-            for (j in range(FFS.pointsOnLambda().size())) Dump.fromAtomDataList(FFS.pickPath(j)).write(FFSAllDumpPath + '/' + j)
+            for (j in range(FFS.pointsOnLambda().size())) Dump.of(FFS.pickPath(j)).write(FFSAllDumpPath + '/' + j)
             IO.dir2zip(FFSAllDumpPath, "${FFSAllDumpPath}-0.zip")
             IO.rmdir(FFSAllDumpPath)
         }
         if (FFS.stepFinished()) {
-            Dump.fromAtomDataList(FFS.pointsOnLambda()).write(FFSRestartPathDu)
+            Dump.of(FFS.pointsOnLambda()).write(FFSRestartPathDu)
             IO.map2json(FFS.restData(), FFSRestartPathRe)
         }
         
@@ -260,14 +260,14 @@ MultipleNativeLmpFullPathGenerator.withOf(subComm, subRoots, dumpCal, initPoints
                 def info = fullPathGen.getTimerInfo()
                 println("PathGenEff: lmp = ${percent(info.lmp/info.total)}, lambda = ${percent(info.lambda/info.total)}, wait = ${percent(info.wait/info.total)}, else = ${percent(info.other/info.total)}")
             }
-            Dump.fromAtomDataList(FFS.pickPath()).write(FFSDumpPath)
+            Dump.of(FFS.pickPath()).write(FFSDumpPath)
             if (dumpAllPath) {
-                for (j in range(FFS.pointsOnLambda().size())) Dump.fromAtomDataList(FFS.pickPath(j)).write(FFSAllDumpPath + '/' + j)
+                for (j in range(FFS.pointsOnLambda().size())) Dump.of(FFS.pickPath(j)).write(FFSAllDumpPath + '/' + j)
                 IO.dir2zip(FFSAllDumpPath, "${FFSAllDumpPath}-${FFS.step()}.zip")
                 IO.rmdir(FFSAllDumpPath)
             }
             if (FFS.stepFinished()) {
-                Dump.fromAtomDataList(FFS.pointsOnLambda()).write(FFSRestartPathDu)
+                Dump.of(FFS.pointsOnLambda()).write(FFSRestartPathDu)
                 IO.map2json(FFS.restData(), FFSRestartPathRe)
             }
         }
@@ -277,9 +277,9 @@ MultipleNativeLmpFullPathGenerator.withOf(subComm, subRoots, dumpCal, initPoints
 }
 MPI.Comm.WORLD.barrier()
 
-calComm.shutdown()
-subComm.shutdown()
-MPI.shutdown()
+calComm.close()
+subComm.close()
+MPI.close()
 
 
 static void runMelt(MPI.Comm comm, NativeLmp lmp, Lmpdat inData, String outDataPath, double temperature, int runStep, double timestep) {

@@ -1,6 +1,6 @@
 /**
  * This file is part of example scripts of FFS in jse
- * Copyright 2025 Qing'an Li
+ * Copyright 2026 Qing'an Li
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,7 +88,7 @@ while (!FFS.finished()) {
     ++i
 }
 UT.Timer.toc("k = ${FFS.getK()}, step1PointNum = ${FFS.step1PointNum()}, step1PathNum = ${FFS.step1PathNum()}, totPointNum = ${FFS.totalPointNum()},")
-FFS.shutdown()
+FFS.close()
 
 // plot
 k = k.op().cumprod()
