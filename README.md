@@ -72,7 +72,7 @@ mpiexec -np 64 jse.bat NiAl.groovy NiAl-FFS
 
 # Citation
 
-Qing-an Li, Yuxuan Chen, Bin Xu, Shiwu Gao, Pengfei Guan,
+Qing'an Li, Yuxuan Chen, Bin Xu, Shiwu Gao, Pengfei Guan,
 [Revealing Crystal Nucleation Behaviors in Metallic Glass-Forming Liquids
 via Parallel Forward Flux Sampling with Multi-Type Bond-Orientational Order
 Parameter](https://www.sciencedirect.com/science/article/abs/pii/S1359645425011589),
